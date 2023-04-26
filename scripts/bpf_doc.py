@@ -885,6 +885,9 @@ class PrinterHelpersHeader(Printer):
                 print(' *{}{}'.format(' \t' if line else '', line))
 
         print(' */')
+        fptr_type = '%s%s(*)(' % (
+            self.map_type(proto['ret_type']),
+            ((' ' + proto['ret_star']) if proto['ret_star'] else ''))
         print('static ', end='')
         if helper.attrs:
             print('%s ' % (" ".join(helper.attrs)), end='')
@@ -906,8 +909,10 @@ class PrinterHelpersHeader(Printer):
                 one_arg += '{}'.format(n)
             comma = ', '
             print(one_arg, end='')
+            fptr_type += one_arg
 
-        print(') = (void *) %d;' % helper.enum_val)
+        fptr_type += ')'
+        print(') = (%s) %d;' % (fptr_type, helper.enum_val))
         print('')
 
 
