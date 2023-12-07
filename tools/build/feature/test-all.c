@@ -166,6 +166,10 @@
 # include "test-reallocarray.c"
 #undef main
 
+#define main main_test_getdents64
+# include "test-getdents64.c"
+#undef main
+
 #define main main_test_disassembler_four_args
 # include "test-disassembler-four-args.c"
 #undef main
@@ -216,6 +220,7 @@ int main(int argc, char *argv[])
 	main_test_setns();
 	main_test_libaio();
 	main_test_reallocarray();
+	main_test_getdents64();
 	main_test_disassembler_four_args();
 	main_test_libzstd();
 
