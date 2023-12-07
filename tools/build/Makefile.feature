@@ -91,6 +91,7 @@ FEATURE_TESTS_BASIC :=                  \
         pthread-attr-setaffinity-np     \
         pthread-barrier     		\
         reallocarray                    \
+        getdents64                      \
         stackprotector-all              \
         timerfd                         \
         zlib                            \
