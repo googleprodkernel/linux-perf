@@ -18,6 +18,7 @@ FILES=                                          \
          test-disassembler-four-args.bin        \
          test-disassembler-init-styled.bin	\
          test-reallocarray.bin			\
+         test-getdents64.bin			\
          test-libbfd-liberty.bin                \
          test-libbfd-liberty-z.bin              \
          test-cplus-demangle.bin                \
@@ -292,6 +293,9 @@ $(OUTPUT)test-disassembler-init-styled.bin:
 	$(BUILD_BFD) -lopcodes -liberty -lz
 
 $(OUTPUT)test-reallocarray.bin:
+	$(BUILD)
+
+$(OUTPUT)test-getdents64.bin:
 	$(BUILD)
 
 $(OUTPUT)test-libbfd-liberty.bin:
