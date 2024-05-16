@@ -267,10 +267,10 @@ static void perf_top__show_details(struct perf_top *top)
 	more = hist_entry__annotate_printf(he, top->sym_evsel);
 
 	if (top->evlist->enabled) {
-		if (top->zero)
-			symbol__annotate_zero_histogram(symbol, top->sym_evsel);
-		else
+		if (top->decay_samples)
 			symbol__annotate_decay_histogram(symbol, top->sym_evsel);
+		else
+			symbol__annotate_zero_histogram(symbol, top->sym_evsel);
 	}
 	if (more != 0)
 		printf("%d lines not displayed, maybe increase display entries [e]\n", more);
@@ -293,11 +293,11 @@ static void perf_top__resort_hists(struct perf_top *t)
 		hists__unlink(hists);
 
 		if (evlist->enabled) {
-			if (t->zero) {
-				hists__delete_entries(hists);
-			} else {
+			if (t->decay_samples) {
 				hists__decay_entries(hists, t->hide_user_symbols,
 						     t->hide_kernel_symbols);
+			} else {
+				hists__delete_entries(hists);
 			}
 		}
 
@@ -461,7 +461,9 @@ static void perf_top__print_mapped_keys(struct perf_top *top)
 	fprintf(stdout,
 		"\t[U]     hide user symbols.               \t(%s)\n",
 		top->hide_user_symbols ? "yes" : "no");
-	fprintf(stdout, "\t[z]     toggle sample zeroing.             \t(%d)\n", top->zero ? 1 : 0);
+	fprintf(stdout,
+		"\t[z]     toggle sample zeroing/decaying.  \t(%s)\n",
+		top->decay_samples ? "decay" : "zero");
 	fprintf(stdout, "\t[qQ]    quit.\n");
 }
 
@@ -584,7 +586,7 @@ static bool perf_top__handle_keypress(struct perf_top *top, int c)
 			top->hide_user_symbols = !top->hide_user_symbols;
 			break;
 		case 'z':
-			top->zero = !top->zero;
+			top->decay_samples = !top->decay_samples;
 			break;
 		default:
 			break;
@@ -650,7 +652,7 @@ repeat:
 				       perf_session__env(top->session),
 				       !top->record_opts.overwrite);
 	if (ret == K_RELOAD) {
-		top->zero = true;
+		top->decay_samples = false;
 		goto repeat;
 	} else
 		stop_top();
@@ -1512,7 +1514,8 @@ int cmd_top(int argc, const char **argv)
 		    "child tasks do not inherit counters"),
 	OPT_STRING(0, "sym-annotate", &top.sym_filter, "symbol name",
 		    "symbol to annotate"),
-	OPT_BOOLEAN('z', "zero", &top.zero, "zero history across updates"),
+	OPT_BOOLEAN('Z', "decay", &top.decay_samples,
+		    "decay rather than zero history across updates"),
 	OPT_CALLBACK('F', "freq", &top.record_opts, "freq or 'max'",
 		     "profile at this frequency",
 		      record__parse_freq),
