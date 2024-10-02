@@ -20,6 +20,7 @@
 #include "evsel.h"
 #include "pmu.h"
 #include "pmus.h"
+#include "tool_pmu.h"
 #include <util/pmu-bison.h>
 #include <util/pmu-flex.h>
 #include "parse-events.h"
@@ -1544,6 +1545,9 @@ int perf_pmu__config(struct perf_pmu *pmu, struct perf_event_attr *attr,
 {
 	bool zero = !!pmu->perf_event_attr_init_default;
 
+	if (perf_pmu__is_tool(pmu))
+		return tool_pmu__config_terms(attr, head_terms, err);
+
 	/* Fake PMU doesn't have proper terms so nothing to configure in attr. */
 	if (perf_pmu__is_fake(pmu))
 		return 0;
@@ -1656,8 +1660,8 @@ int perf_pmu__check_alias(struct perf_pmu *pmu, struct parse_events_terms *head_
 	info->scale    = 0.0;
 	info->snapshot = false;
 
-	/* Fake PMU doesn't rewrite terms. */
-	if (perf_pmu__is_fake(pmu))
+	/* Tool/fake PMU doesn't rewrite terms. */
+	if (perf_pmu__is_tool(pmu) || perf_pmu__is_fake(pmu))
 		goto out;
 
 	list_for_each_entry_safe(term, h, &head_terms->terms, list) {
@@ -1827,6 +1831,8 @@ bool perf_pmu__have_event(struct perf_pmu *pmu, const char *name)
 {
 	if (!name)
 		return false;
+	if (perf_pmu__is_tool(pmu))
+		return perf_tool_event__from_str(name) != PERF_TOOL_NONE;
 	if (perf_pmu__find_alias(pmu, name, /*load=*/ true) != NULL)
 		return true;
 	if (pmu->cpu_aliases_added || !pmu->events_table)
@@ -1837,6 +1843,9 @@ bool perf_pmu__have_event(struct perf_pmu *pmu, const char *name)
 size_t perf_pmu__num_events(struct perf_pmu *pmu)
 {
 	size_t nr;
+
+	if (perf_pmu__is_tool(pmu))
+		return tool_pmu__num_events();
 
 	pmu_aliases_parse(pmu);
 	nr = pmu->sysfs_aliases + pmu->sys_json_aliases;
@@ -1897,6 +1906,9 @@ int perf_pmu__for_each_event(struct perf_pmu *pmu, bool skip_duplicate_pmus,
 	};
 	int ret = 0;
 	struct strbuf sb;
+
+	if (perf_pmu__is_tool(pmu))
+		return tool_pmu__for_each_event_cb(pmu, state, cb);
 
 	strbuf_init(&sb, /*hint=*/ 0);
 	pmu_aliases_parse(pmu);
@@ -1986,6 +1998,7 @@ bool perf_pmu__is_software(const struct perf_pmu *pmu)
 	case PERF_TYPE_HW_CACHE:	return false;
 	case PERF_TYPE_RAW:		return false;
 	case PERF_TYPE_BREAKPOINT:	return true;
+	case PERF_PMU_TYPE_TOOL:	return true;
 	default: break;
 	}
 	for (size_t i = 0; i < ARRAY_SIZE(known_sw_pmus); i++) {
@@ -2308,6 +2321,9 @@ const char *perf_pmu__name_from_config(struct perf_pmu *pmu, u64 config)
 
 	if (!pmu)
 		return NULL;
+
+	if (perf_pmu__is_tool(pmu))
+		return perf_tool_event__to_str(config);
 
 	pmu_aliases_parse(pmu);
 	pmu_add_cpu_aliases(pmu);
