@@ -1545,9 +1545,6 @@ int perf_pmu__config(struct perf_pmu *pmu, struct perf_event_attr *attr,
 {
 	bool zero = !!pmu->perf_event_attr_init_default;
 
-	if (perf_pmu__is_tool(pmu))
-		return tool_pmu__config_terms(attr, head_terms, err);
-
 	/* Fake PMU doesn't have proper terms so nothing to configure in attr. */
 	if (perf_pmu__is_fake(pmu))
 		return 0;
@@ -1660,8 +1657,8 @@ int perf_pmu__check_alias(struct perf_pmu *pmu, struct parse_events_terms *head_
 	info->scale    = 0.0;
 	info->snapshot = false;
 
-	/* Tool/fake PMU doesn't rewrite terms. */
-	if (perf_pmu__is_tool(pmu) || perf_pmu__is_fake(pmu))
+	/* Fake PMU doesn't rewrite terms. */
+	if (perf_pmu__is_fake(pmu))
 		goto out;
 
 	list_for_each_entry_safe(term, h, &head_terms->terms, list) {
@@ -1831,8 +1828,8 @@ bool perf_pmu__have_event(struct perf_pmu *pmu, const char *name)
 {
 	if (!name)
 		return false;
-	if (perf_pmu__is_tool(pmu))
-		return tool_pmu__str_to_event(name) != TOOL_PMU__EVENT_NONE;
+	if (perf_pmu__is_tool(pmu) && tool_pmu__skip_event(name))
+		return false;
 	if (perf_pmu__find_alias(pmu, name, /*load=*/ true) != NULL)
 		return true;
 	if (pmu->cpu_aliases_added || !pmu->events_table)
@@ -1844,9 +1841,6 @@ size_t perf_pmu__num_events(struct perf_pmu *pmu)
 {
 	size_t nr;
 
-	if (perf_pmu__is_tool(pmu))
-		return tool_pmu__num_events();
-
 	pmu_aliases_parse(pmu);
 	nr = pmu->sysfs_aliases + pmu->sys_json_aliases;
 
@@ -1856,6 +1850,9 @@ size_t perf_pmu__num_events(struct perf_pmu *pmu)
 		nr += pmu_events_table__num_events(pmu->events_table, pmu) - pmu->cpu_json_aliases;
 	else
 		assert(pmu->cpu_json_aliases == 0);
+
+	if (perf_pmu__is_tool(pmu))
+		nr -= tool_pmu__num_skip_events();
 
 	return pmu->selectable ? nr + 1 : nr;
 }
@@ -1907,14 +1904,14 @@ int perf_pmu__for_each_event(struct perf_pmu *pmu, bool skip_duplicate_pmus,
 	int ret = 0;
 	struct strbuf sb;
 
-	if (perf_pmu__is_tool(pmu))
-		return tool_pmu__for_each_event_cb(pmu, state, cb);
-
 	strbuf_init(&sb, /*hint=*/ 0);
 	pmu_aliases_parse(pmu);
 	pmu_add_cpu_aliases(pmu);
 	list_for_each_entry(event, &pmu->aliases, list) {
 		size_t buf_used, pmu_name_len;
+
+		if (perf_pmu__is_tool(pmu) && tool_pmu__skip_event(event->name))
+			continue;
 
 		info.pmu_name = event->pmu_name ?: pmu->name;
 		pmu_name_len = pmu_deduped_name_len(pmu, info.pmu_name,
@@ -2316,9 +2313,6 @@ const char *perf_pmu__name_from_config(struct perf_pmu *pmu, u64 config)
 
 	if (!pmu)
 		return NULL;
-
-	if (perf_pmu__is_tool(pmu))
-		return tool_pmu__event_to_str(config);
 
 	pmu_aliases_parse(pmu);
 	pmu_add_cpu_aliases(pmu);
