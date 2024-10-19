@@ -1576,7 +1576,7 @@ static int symbol__disassemble_capstone_powerpc(char *filename, struct symbol *s
 
 		dl = disasm_line__new(args);
 		if (dl == NULL)
-			goto err;
+			break;
 
 		annotation_line__add(&dl->al, &notes->src->source);
 
@@ -1606,18 +1606,6 @@ out:
 err:
 	if (fd >= 0)
 		close(fd);
-	if (needs_cs_close) {
-		struct disasm_line *tmp;
-
-		/*
-		 * It probably failed in the middle of the above loop.
-		 * Release any resources it might add.
-		 */
-		list_for_each_entry_safe(dl, tmp, &notes->src->source, al.node) {
-			list_del(&dl->al.node);
-			free(dl);
-		}
-	}
 	count = -1;
 	goto out;
 }
