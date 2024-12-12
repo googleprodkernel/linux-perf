@@ -168,11 +168,12 @@ int write_padded(struct feat_fd *ff, const void *bf,
 		 size_t count, size_t count_aligned)
 {
 	static const char zero_buf[NAME_ALIGN];
-	int err = do_write(ff, bf, count);
+	int err = count > 0 ? do_write(ff, bf, count) : 0;
 
-	if (!err)
+	if (!err && count_aligned > count) {
+		assert(count_aligned - count < sizeof(zero_buf));
 		err = do_write(ff, zero_buf, count_aligned - count);
-
+	}
 	return err;
 }
 
