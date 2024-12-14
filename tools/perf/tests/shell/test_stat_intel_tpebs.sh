@@ -3,7 +3,22 @@
 # SPDX-License-Identifier: GPL-2.0
 
 set -e
-grep -q GenuineIntel /proc/cpuinfo || { echo Skipping non-Intel; exit 2; }
+
+ParanoidAndNotRoot() {
+  [ "$(id -u)" != 0 ] && [ "$(cat /proc/sys/kernel/perf_event_paranoid)" -gt $1 ]
+}
+
+if ! grep -q GenuineIntel /proc/cpuinfo
+then
+  echo "Skipping non-Intel"
+  exit 2
+fi
+
+if ParanoidAndNotRoot 0
+then
+  echo "Skipping paranoid >0 and not root"
+  exit 2
+fi
 
 # Use this event for testing because it should exist in all platforms
 event=cache-misses:R
@@ -20,3 +35,4 @@ alt_name=/cache-misses/R
 echo "Testing with --record-tpebs"
 result=$(perf stat -e "$event" --record-tpebs -a sleep 0.01 2>&1)
 [[ "$result" =~ "perf record" && "$result" =~ $event || "$result" =~ $alt_name ]] || exit 1
+echo "Success!"
