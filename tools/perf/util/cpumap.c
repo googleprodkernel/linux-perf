@@ -301,7 +301,8 @@ int cpu__get_die_id(struct perf_cpu cpu)
 {
 	int value, ret = cpu__get_topology_int(cpu.cpu, "die_id", &value);
 
-	return ret ?: value;
+        /* If die_id is missing fallback on using the socket/physical_package_id. */
+	return ret || value < 0 ? cpu__get_socket_id(cpu) : value;
 }
 
 struct aggr_cpu_id aggr_cpu_id__die(struct perf_cpu cpu, void *data)
