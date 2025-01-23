@@ -941,7 +941,7 @@ int pmu_events_table__for_each_event(const struct pmu_events_table *table,
                 const char *pmu_name = &big_c_string[table_pmu->pmu_name.offset];
                 int ret;
 
-                if (pmu && !pmu__name_match(pmu, pmu_name))
+                if (pmu && !perf_pmu__name_wildcard_match(pmu, pmu_name))
                         continue;
 
                 ret = pmu_events_table__for_each_event_pmu(table, table_pmu, fn, data);
@@ -962,7 +962,7 @@ int pmu_events_table__find_event(const struct pmu_events_table *table,
                 const char *pmu_name = &big_c_string[table_pmu->pmu_name.offset];
                 int ret;
 
-                if (!pmu__name_match(pmu, pmu_name))
+                if (!perf_pmu__name_wildcard_match(pmu, pmu_name))
                         continue;
 
                 ret = pmu_events_table__find_event_pmu(table, table_pmu, name, fn, data);
@@ -981,7 +981,7 @@ size_t pmu_events_table__num_events(const struct pmu_events_table *table,
                 const struct pmu_table_entry *table_pmu = &table->pmus[i];
                 const char *pmu_name = &big_c_string[table_pmu->pmu_name.offset];
 
-                if (pmu__name_match(pmu, pmu_name))
+                if (perf_pmu__name_wildcard_match(pmu, pmu_name))
                         count += table_pmu->num_entries;
         }
         return count;
@@ -1091,7 +1091,7 @@ const struct pmu_events_table *perf_pmu__find_events_table(struct perf_pmu *pmu)
                 const struct pmu_table_entry *table_pmu = &map->event_table.pmus[i];
                 const char *pmu_name = &big_c_string[table_pmu->pmu_name.offset];
 
-                if (pmu__name_match(pmu, pmu_name))
+                if (perf_pmu__name_wildcard_match(pmu, pmu_name))
                          return &map->event_table;
         }
         return NULL;
@@ -1111,7 +1111,7 @@ const struct pmu_metrics_table *perf_pmu__find_metrics_table(struct perf_pmu *pm
                 const struct pmu_table_entry *table_pmu = &map->metric_table.pmus[i];
                 const char *pmu_name = &big_c_string[table_pmu->pmu_name.offset];
 
-                if (pmu__name_match(pmu, pmu_name))
+                if (perf_pmu__name_wildcard_match(pmu, pmu_name))
                            return &map->metric_table;
         }
         return NULL;
