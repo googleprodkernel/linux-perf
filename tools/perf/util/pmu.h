@@ -191,6 +191,9 @@ struct perf_pmu {
 struct perf_pmu_info {
 	const char *unit;
 	double scale;
+	double retirement_latency_mean;
+	double retirement_latency_min;
+	double retirement_latency_max;
 	bool per_pkg;
 	bool snapshot;
 };
