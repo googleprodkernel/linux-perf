@@ -1052,8 +1052,15 @@ static void print_counter_aggrdata(struct perf_stat_config *config,
 	os->evsel = counter;
 
 	/* Skip already merged uncore/hybrid events */
-	if (counter->merged_stat)
-		return;
+	if (config->aggr_mode != AGGR_NONE) {
+		if (evsel__is_hybrid(counter)) {
+			if (config->hybrid_merge && counter->first_wildcard_match != NULL)
+				return;
+		} else {
+			if (counter->first_wildcard_match != NULL)
+				return;
+		}
+	}
 
 	evsel__uniquify_counter(counter);
 
@@ -1659,11 +1666,6 @@ static void evsel__set_needs_uniquify(struct evsel *counter, const struct perf_s
 {
 	struct evsel *evsel;
 
-	if (counter->merged_stat) {
-		/* Counter won't be shown. */
-		return;
-	}
-
 	if (counter->use_config_name || counter->is_libpfm_event) {
 		/* Original name will be used. */
 		return;
@@ -1692,12 +1694,21 @@ static void evsel__set_needs_uniquify(struct evsel *counter, const struct perf_s
 		return;
 	}
 
+	if (counter->first_wildcard_match != NULL) {
+		/*
+		 * If stats are merged then only the first_wildcard_match is
+		 * displayed, there is no need to uniquify this evsel as the
+		 * name won't be shown.
+		 */
+		return;
+	}
+
 	/*
 	 * Do other non-merged events in the evlist have the same name? If so
 	 * uniquify is necessary.
 	 */
 	evlist__for_each_entry(counter->evlist, evsel) {
-		if (evsel == counter || evsel->merged_stat)
+		if (evsel == counter || evsel->first_wildcard_match || evsel->pmu == counter->pmu)
 			continue;
 
 		if (evsel__name_is(counter, evsel__name(evsel))) {
