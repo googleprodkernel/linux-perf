@@ -1627,6 +1627,10 @@ static int parse_events_add_pmu(struct parse_events_state *parse_state,
 	evsel->scale = info.scale;
 	evsel->per_pkg = info.per_pkg;
 	evsel->snapshot = info.snapshot;
+	evsel->retirement_latency.mean = info.retirement_latency_mean;
+	evsel->retirement_latency.min = info.retirement_latency_min;
+	evsel->retirement_latency.max = info.retirement_latency_max;
+
 	return 0;
 }
 
