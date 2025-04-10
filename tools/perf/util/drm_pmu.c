@@ -74,7 +74,7 @@ static struct drm_pmu *add_drm_pmu(struct list_head *pmus, char *line, size_t li
 	struct drm_pmu *drm;
 	struct perf_pmu *pmu;
 	const char *name;
-	__u32 max_drm_pmu_type = 0;
+	__u32 max_drm_pmu_type = 0, type;
 	int i = 12;
 
 	if (line[line_len - 1] == '\n')
@@ -104,29 +104,31 @@ static struct drm_pmu *add_drm_pmu(struct list_head *pmus, char *line, size_t li
 		return NULL;
 
 	if (max_drm_pmu_type != 0)
-		drm->pmu.type = max_drm_pmu_type + 1;
+		type = max_drm_pmu_type + 1;
 	else
-		drm->pmu.type = PERF_PMU_TYPE_DRM_START;
+		type = PERF_PMU_TYPE_DRM_START;
 
-	if (drm->pmu.type > PERF_PMU_TYPE_DRM_END) {
+	if (type > PERF_PMU_TYPE_DRM_END) {
 		zfree(&drm);
 		pr_err("Unable to encode DRM PMU type for %s\n", name);
 		return NULL;
 	}
+
+	if (perf_pmu__init(&drm->pmu, type, name) != 0) {
+		perf_pmu__delete(&drm->pmu);
+		return NULL;
+	}
+
 	drm->pmu.name = strdup(name);
 	if (!drm->pmu.name) {
-		zfree(&drm);
+		perf_pmu__delete(&drm->pmu);
 		return NULL;
 	}
 	drm->pmu.cpus = perf_cpu_map__new("0");
 	if (!drm->pmu.cpus) {
-		zfree(&drm->pmu.name);
-		zfree(&drm);
+		perf_pmu__delete(&drm->pmu);
 		return NULL;
 	}
-	INIT_LIST_HEAD(&drm->pmu.format);
-	INIT_LIST_HEAD(&drm->pmu.aliases);
-	INIT_LIST_HEAD(&drm->pmu.caps);
 	return drm;
 }
 
