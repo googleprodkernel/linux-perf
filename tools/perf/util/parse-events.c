@@ -864,6 +864,7 @@ const char *parse_events__term_type_str(enum parse_events__term_type term_type)
 		[PARSE_EVENTS__TERM_TYPE_RAW]                   = "raw",
 		[PARSE_EVENTS__TERM_TYPE_LEGACY_CACHE]          = "legacy-cache",
 		[PARSE_EVENTS__TERM_TYPE_HARDWARE]              = "hardware",
+		[PARSE_EVENTS__TERM_TYPE_SOFTWARE]              = "software",
 		[PARSE_EVENTS__TERM_TYPE_CPU]			= "cpu",
 	};
 	if ((unsigned int)term_type >= __PARSE_EVENTS__TERM_TYPE_NR)
@@ -915,6 +916,7 @@ config_term_avail(enum parse_events__term_type term_type, struct parse_events_er
 	case PARSE_EVENTS__TERM_TYPE_RAW:
 	case PARSE_EVENTS__TERM_TYPE_LEGACY_CACHE:
 	case PARSE_EVENTS__TERM_TYPE_HARDWARE:
+	case PARSE_EVENTS__TERM_TYPE_SOFTWARE:
 	default:
 		if (!err)
 			return false;
@@ -1055,6 +1057,7 @@ do {									   \
 	case PARSE_EVENTS__TERM_TYPE_USER:
 	case PARSE_EVENTS__TERM_TYPE_LEGACY_CACHE:
 	case PARSE_EVENTS__TERM_TYPE_HARDWARE:
+	case PARSE_EVENTS__TERM_TYPE_SOFTWARE:
 	default:
 		parse_events_error__handle(err, term->err_term,
 					strdup(parse_events__term_type_str(term->type_term)),
@@ -1107,7 +1110,8 @@ static int config_term_pmu(struct perf_event_attr *attr,
 			term->no_value = true;
 		}
 	}
-	if (term->type_term == PARSE_EVENTS__TERM_TYPE_HARDWARE) {
+	if (term->type_term == PARSE_EVENTS__TERM_TYPE_HARDWARE ||
+	    term->type_term == PARSE_EVENTS__TERM_TYPE_SOFTWARE) {
 		struct perf_pmu *pmu = perf_pmus__find_by_type(attr->type);
 
 		if (!pmu) {
@@ -1127,10 +1131,15 @@ static int config_term_pmu(struct perf_event_attr *attr,
 			term->no_value = true;
 			term->alternate_hw_config = true;
 		} else {
-			attr->type = PERF_TYPE_HARDWARE;
 			attr->config = term->val.num;
-			if (perf_pmus__supports_extended_type())
-				attr->config |= (__u64)pmu->type << PERF_PMU_TYPE_SHIFT;
+			if (term->type_term == PARSE_EVENTS__TERM_TYPE_HARDWARE) {
+				attr->type = PERF_TYPE_HARDWARE;
+				if (perf_pmus__supports_extended_type())
+					attr->config |= (__u64)pmu->type << PERF_PMU_TYPE_SHIFT;
+
+			} else {
+				attr->type = PERF_TYPE_SOFTWARE;
+			}
 		}
 		return 0;
 	}
@@ -1178,6 +1187,7 @@ static int config_term_tracepoint(struct perf_event_attr *attr,
 	case PARSE_EVENTS__TERM_TYPE_RAW:
 	case PARSE_EVENTS__TERM_TYPE_LEGACY_CACHE:
 	case PARSE_EVENTS__TERM_TYPE_HARDWARE:
+	case PARSE_EVENTS__TERM_TYPE_SOFTWARE:
 	case PARSE_EVENTS__TERM_TYPE_CPU:
 	default:
 		if (err) {
@@ -1313,6 +1323,7 @@ do {								\
 		case PARSE_EVENTS__TERM_TYPE_RAW:
 		case PARSE_EVENTS__TERM_TYPE_LEGACY_CACHE:
 		case PARSE_EVENTS__TERM_TYPE_HARDWARE:
+		case PARSE_EVENTS__TERM_TYPE_SOFTWARE:
 		case PARSE_EVENTS__TERM_TYPE_CPU:
 		default:
 			break;
@@ -1368,6 +1379,7 @@ static int get_config_chgs(struct perf_pmu *pmu, struct parse_events_terms *head
 		case PARSE_EVENTS__TERM_TYPE_RAW:
 		case PARSE_EVENTS__TERM_TYPE_LEGACY_CACHE:
 		case PARSE_EVENTS__TERM_TYPE_HARDWARE:
+		case PARSE_EVENTS__TERM_TYPE_SOFTWARE:
 		case PARSE_EVENTS__TERM_TYPE_CPU:
 		default:
 			break;
