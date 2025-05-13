@@ -2328,8 +2328,8 @@ int __parse_events(struct evlist *evlist, const char *str, const char *pmu_filte
 		if (verbose > 0) {
 			struct strbuf sb = STRBUF_INIT;
 
-			evlist__uniquify_name(evlist);
-			evlist__format_evsels(evlist, &sb, 1024);
+			evlist__uniquify_evsel_names(evlist, &stat_config);
+			evlist__format_evsels(evlist, &sb, 2048);
 			pr_debug("evlist after sorting/fixing: '%s'\n", sb.buf);
 			strbuf_release(&sb);
 		}
