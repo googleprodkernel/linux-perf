@@ -22,6 +22,9 @@ def Arm64Topdown() -> MetricGroup:
   # ARM models like a53 lack JSON for INST_RETIRED but have the
   # architetural standard event in sysfs. Use the PMU name to identify
   # the sysfs event.
+  if _args.vendor != "arm" and _args.vendor != "ampere":
+    return None
+
   pmu_name = f'armv8_{_args.model.replace("-", "_")}'
   ins = Event("instructions")
   ins_ret = Event("INST_RETIRED", f"{pmu_name}/inst_retired/")
